@@ -20,12 +20,20 @@
 #
 #
 #Libraries and Packages
-require(dplyr)
+#auto updater and installer if the package is not already installed
+#if (!require("pacman")) install.packages("pacman")
+#pacman::p_load(dplyr, readr, ggplot2, hrbrthemes, RColorBrewer, lubridate, countrycode)
+#
+
+
+
+library(dplyr)
 library(readr)
-require(ggplot2)
+library(ggplot2)
 library(hrbrthemes)
 library(RColorBrewer)
 library(lubridate)
+library(countrycode)
 ###############################################################################
 ###############################################################################
 #########################Auto Fetch############################################
@@ -45,7 +53,7 @@ df_bind <- bind_rows(df_list)
 threedsecure_authentication_report <-
   read_csv("threedsecure_authentication_report_2021-07-01T00 00 00_2021-09-30T23 59 59.csv")
 
-names(threed_secure_authentication_report)
+names(threedsecure_authentication_report)
 
 threedsecure_authentication_report_tidy <-
   threedsecure_authentication_report %>% select(
@@ -54,6 +62,7 @@ threedsecure_authentication_report_tidy <-
     shopper_reference,
     currency,
     amount,
+    issuer_name,
     issuer_country_code,
     creation_date,
     risk_score,
@@ -102,15 +111,15 @@ threedsecure_authentication_report_tidy <-
   ))
 
 threedsecure_authentication_report_tidy <-
-  threedsecure_authentication_report_tidy %>%
-  +mutate(payment_method = ifelse(
+  threedsecure_authentication_report_tidy %>%  mutate(payment_method = ifelse(
     as.character(payment_method) == "maestro",
     "Maestro",
     as.character(payment_method)
   ))
 
 threedsecure_authentication_report_tidy <-
-  as.POSIXct(threedsecure_authentication_report_tidy$creation_date)
+  threedsecure_authentication_report_tidy %>% mutate(creation_date = as.POSIXct(creation_date))
+as.POSIXct(threedsecure_authentication_report_tidy$creation_date)
 
 threedsecure_authentication_report_tidy <-
   threedsecure_authentication_report_tidy %>% mutate(shopper_name = tolower(shopper_name))
@@ -118,8 +127,41 @@ threedsecure_authentication_report_tidy <-
 threedsecure_authentication_report_tidy <-
   threedsecure_authentication_report_tidy %>% mutate(shopper_email = tolower(shopper_email))
 
+threedsecure_authentication_report_tidy$issuer_country_code_1 <-
+  threedsecure_authentication_report_tidy %>% mutate(
+    issuer_country_code = countrycode(
+      threedsecure_authentication_report_tidy$issuer_country_code,
+      origin = "iso2c",
+      destination = "country.name"
+    )
+  )
 
+threedsecure_authentication_report_tidy <-
+  threedsecure_authentication_report_tidy %>% mutate(issuer_country_code = threedsecure_authentication_report_tidy$issuer_country_code_1$issuer_country_code)
 
+threedsecure_authentication_report_tidy <-
+  threedsecure_authentication_report_tidy %>% mutate(issuer_country_code = toupper(issuer_country_code))
+
+threedsecure_authentication_report_tidy <-
+  threedsecure_authentication_report_tidy %>% mutate(issuer_name)
+
+threedsecure_authentication_report_tidy <-
+  threedsecure_authentication_report_tidy %>% mutate(issuer_name = gsub("\\.", "", issuer_name))
+
+threedsecure_authentication_report_tidy <-
+  threedsecure_authentication_report_tidy %>% mutate(issuer_name = tolower(issuer_name))
+
+threedsecure_authentication_report_tidy <-
+  threedsecure_authentication_report_tidy %>% mutate(issuer_name = gsub("spa", "", issuer_name))
+
+threedsecure_authentication_report_tidy <-
+  threedsecure_authentication_report_tidy %>% mutate(issuer_name = ifelse(is.na(issuer_name), "Not Available", issuer_name))
+
+threedsecure_authentication_report_tidy <-
+  threedsecure_authentication_report_tidy %>% mutate(issuer_name = trimws(issuer_name))
+
+threedsecure_authentication_report_tidy <-
+  threedsecure_authentication_report_tidy %>% mutate(issuer_name = toupper(issuer_name))
 
 
 #################################################################################
@@ -173,7 +215,19 @@ text(graph_1, +3, round(try_table2$Frequenza, 1),cex=1,pos=3)
 top_10_tryharders <- email %>% filter(rank(desc(count)) <=10) %>% arrange(desc(count))
 
 
+#density and distribution of risk sccore non aggregati
+#1
+#
+ggplot(risk_curve, aes(x = risk_score)) +
+  geom_histogram(aes(y = ..density..), binwidth = 5, colour= "black", fill = "white") +
+  geom_density(fill="blue", alpha = .2)
 
+risk_curve_aggregate$rounded <- round(risk_curve_aggregate$x)
+
+
+risk_curve_aggregate <-
+  risk_curve_aggregate %>% rename(shopper_mail = Group.1, risk_score_mean = rounded)
+risk_curve_aggregate <- risk_curve_aggregate %>% select(-x)
 
 
 
@@ -217,10 +271,3 @@ ggplot(try_table2, aes(x="", y=try_table2$Frequenza, fill=try_table2$`Numero di 
     ")"
   )),
   position = position_stack(vjust = 0.5))
-
-
-
-
-
-
-
