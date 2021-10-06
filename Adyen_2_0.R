@@ -1,7 +1,7 @@
 #################################Adyen 2.0#####################################
 ###############################################################################
 #######################3D Secure Authentication Report#########################
-############################################################################### 
+###############################################################################
 ##############################Api Connection###################################
 ###############################################################################
 ###############################################################################
@@ -22,7 +22,7 @@
 #Libraries and Packages
 #auto updater and installer if the package is not already installed
 #if (!require("pacman")) install.packages("pacman")
-#pacman::p_load(dplyr, readr, ggplot2, hrbrthemes, RColorBrewer, lubridate, countrycode)
+#pacman::p_load(dplyr, readr, ggplot2, hrbrthemes, RColorBrewer, lubridate, countrycode, stringi, tidyverse)
 #
 
 
@@ -34,6 +34,8 @@ library(hrbrthemes)
 library(RColorBrewer)
 library(lubridate)
 library(countrycode)
+library(stringi)
+library(tidyverse)
 ###############################################################################
 ###############################################################################
 #########################Auto Fetch############################################
@@ -143,9 +145,6 @@ threedsecure_authentication_report_tidy <-
   threedsecure_authentication_report_tidy %>% mutate(issuer_country_code = toupper(issuer_country_code))
 
 threedsecure_authentication_report_tidy <-
-  threedsecure_authentication_report_tidy %>% mutate(issuer_name)
-
-threedsecure_authentication_report_tidy <-
   threedsecure_authentication_report_tidy %>% mutate(issuer_name = gsub("\\.", "", issuer_name))
 
 threedsecure_authentication_report_tidy <-
@@ -164,29 +163,69 @@ threedsecure_authentication_report_tidy <-
   threedsecure_authentication_report_tidy %>% mutate(issuer_name = toupper(issuer_name))
 
 
+threedsecure_authentication_report_tidy <-
+  threedsecure_authentication_report_tidy %>% mutate(acquirer_response = gsub("approved", "Approved", acquirer_response))
+
+threedsecure_authentication_report_tidy <-
+  threedsecure_authentication_report_tidy %>% mutate(acquirer_response = gsub("declined", "Declined", acquirer_response))
+
+threedsecure_authentication_report_tidy <-
+  threedsecure_authentication_report_tidy %>% mutate(acquirer_response = gsub("unknown", "Unknown", acquirer_response))
+
+threedsecure_authentication_report_tidy <-
+  threedsecure_authentication_report_tidy %>% mutate(acquirer_response = ifelse(is.na(acquirer_response), "Unknown", acquirer_response))
+
+
+threedsecure_authentication_report_tidy <-
+  threedsecure_authentication_report_tidy %>% mutate(raw_acquirer_response = str_sub(raw_acquirer_response, 5, -1))
+
+threedsecure_authentication_report_tidy$issuer_country_code_2 <-
+  threedsecure_authentication_report_tidy %>% mutate(
+    shopper_country = countrycode(
+      threedsecure_authentication_report_tidy$shopper_country,
+      origin = "iso2c",
+      destination = "country.name"
+    )
+  )
+
+threedsecure_authentication_report_tidy <-
+  threedsecure_authentication_report_tidy %>% mutate(shopper_country = threedsecure_authentication_report_tidy$issuer_country_code_2$shopper_country)
+
+threedsecure_authentication_report_tidy <-
+  threedsecure_authentication_report_tidy %>% mutate(shopper_country = toupper(shopper_country))
+
+threedsecure_authentication_report_tidy <- threedsecure_authentication_report_tidy %>% mutate( liability_shift = gsub("FALSE", "NO FRIENDLY FRAUD PROTECTION", liability_shift))
+
+threedsecure_authentication_report_tidy <- threedsecure_authentication_report_tidy %>% mutate( liability_shift = gsub("TRUE", "FRIENDLY FRAUD PROTECTION", liability_shift))
+
 #################################################################################
 ##################################Fast Lookup####################################
 
 
 
-email <- manual_extraction %>% select(`Shopper Email`) %>% group_by(`Shopper Email`) %>% summarise(count = n()) 
+email <-
+  manual_extraction %>% select(`Shopper Email`) %>% group_by(`Shopper Email`) %>% summarise(count = n())
 
-try_table <- email %>% select(count) %>% group_by(count) %>% summarise(count = n())  
-  
+try_table <-
+  email %>% select(count) %>% group_by(count) %>% summarise(count = n())
+
 distribution_try_mean <- mean(email$count)
 
 try_table2 <- as.data.frame(table(email$count))
 
 total_transaction <- sum(unlist(try_table2$Frequenza))
 
-try_table2 <- try_table2 %>% rename(`Numero di tentativi` = Var1, Frequenza = Freq)
+try_table2 <-
+  try_table2 %>% rename(`Numero di tentativi` = Var1, Frequenza = Freq)
 
-try_table2 <- try_table2 %>% mutate(`Numero di tentativi` = as.character(as.factor(`Numero di tentativi`)))
+try_table2 <-
+  try_table2 %>% mutate(`Numero di tentativi` = as.character(as.factor(`Numero di tentativi`)))
 
 max_axis_y <- summarize(try_table2$Frequenza)
 
 #########################3D Offered#################################
-threed_offered <- manual_extraction %>% select(`3D Offered`) %>% group_by(`3D Offered`) %>% summarise(count = n()) 
+threed_offered <-
+  manual_extraction %>% select(`3D Offered`) %>% group_by(`3D Offered`) %>% summarise(count = n())
 
 
 
@@ -203,24 +242,45 @@ threed_offered <- manual_extraction %>% select(`3D Offered`) %>% group_by(`3D Of
 
 
 ################Graphic 1################
-max_axis_y<-  try_table2 %>%  summarise_if(is.numeric, max)
+max_axis_y <-  try_table2 %>%  summarise_if(is.numeric, max)
 
-coul <- brewer.pal(9,"YlOrRd")
+coul <- brewer.pal(9, "YlOrRd")
 
-graph_1 <- barplot(height = try_table2$Frequenza, names.arg = try_table2$`Numero di tentativi`, ylim=c(0,1.1*max(unlist(try_table2$Frequenza))), col =  coul, ylab = "Frequenza", xlab = "Numero di Tentativi", main = "Tentativi di pagamento effettuati per ID utente in questo mese" )
+graph_1 <-
+  barplot(
+    height = try_table2$Frequenza,
+    names.arg = try_table2$`Numero di tentativi`,
+    ylim = c(0, 1.1 * max(unlist(
+      try_table2$Frequenza
+    ))),
+    col =  coul,
+    ylab = "Frequenza",
+    xlab = "Numero di Tentativi",
+    main = "Tentativi di pagamento effettuati per ID utente in questo mese"
+  )
 
 grid(col = "black")
-text(graph_1, +3, round(try_table2$Frequenza, 1),cex=1,pos=3) 
+text(graph_1,
+     +3,
+     round(try_table2$Frequenza, 1),
+     cex = 1,
+     pos = 3)
 
-top_10_tryharders <- email %>% filter(rank(desc(count)) <=10) %>% arrange(desc(count))
+top_10_tryharders <-
+  email %>% filter(rank(desc(count)) <= 10) %>% arrange(desc(count))
 
 
 #density and distribution of risk sccore non aggregati
 #1
 #
 ggplot(risk_curve, aes(x = risk_score)) +
-  geom_histogram(aes(y = ..density..), binwidth = 5, colour= "black", fill = "white") +
-  geom_density(fill="blue", alpha = .2)
+  geom_histogram(
+    aes(y = ..density..),
+    binwidth = 5,
+    colour = "black",
+    fill = "white"
+  ) +
+  geom_density(fill = "blue", alpha = .2)
 
 risk_curve_aggregate$rounded <- round(risk_curve_aggregate$x)
 
@@ -242,19 +302,32 @@ risk_curve_aggregate <- risk_curve_aggregate %>% select(-x)
 #######PIECHART########
 
 # Compute the position of labels
-try_table2 <- try_table2 %>% 
+try_table2 <- try_table2 %>%
   arrange(desc(`Numero di tentativi`)) %>%
-  mutate(prop = try_table2$Frequenza / sum(try_table2$Frequenza) *100) %>%
-  mutate(ypos = cumsum(prop)- 0.5*prop )
+  mutate(prop = try_table2$Frequenza / sum(try_table2$Frequenza) * 100) %>%
+  mutate(ypos = cumsum(prop) - 0.5 * prop)
 
-ggplot(try_table2, aes(x="", y=try_table2$Frequenza, fill=try_table2$`Numero di tentativi`)) +
-  geom_bar(stat="identity", width=1, color="white") +
-  coord_polar("y", start=0) +
-  theme_void() + 
-  theme(legend.position="none") +
+ggplot(
+  try_table2,
+  aes(
+    x = "",
+    y = try_table2$Frequenza,
+    fill = try_table2$`Numero di tentativi`
+  )
+) +
+  geom_bar(stat = "identity",
+           width = 1,
+           color = "white") +
+  coord_polar("y", start = 0) +
+  theme_void() +
+  theme(legend.position = "none") +
   
-  geom_text(aes(y = ypos, label = try_table2$`Numero di tentativi`), color = "white", size=6) +
- 
+  geom_text(
+    aes(y = ypos, label = try_table2$`Numero di tentativi`),
+    color = "white",
+    size = 6
+  ) +
+  
   
   ggplot(
     try_table2,
@@ -263,7 +336,7 @@ ggplot(try_table2, aes(x="", y=try_table2$Frequenza, fill=try_table2$`Numero di 
       y = try_table2$Frequenza,
       fill = try_table2$`Numero di tentativi`
     )
-  )+geom_bar(stat = "identity", width = 1)+coord_polar("y", start = 0) +
+  ) + geom_bar(stat = "identity", width = 1) + coord_polar("y", start = 0) +
   theme_void() + geom_text(aes(label = paste0(
     Frequenza,
     " (",
