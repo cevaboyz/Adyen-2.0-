@@ -194,9 +194,25 @@ threedsecure_authentication_report_tidy <-
 threedsecure_authentication_report_tidy <-
   threedsecure_authentication_report_tidy %>% mutate(shopper_country = toupper(shopper_country))
 
-threedsecure_authentication_report_tidy <- threedsecure_authentication_report_tidy %>% mutate( liability_shift = gsub("FALSE", "NO FRIENDLY FRAUD PROTECTION", liability_shift))
+threedsecure_authentication_report_tidy <-
+  threedsecure_authentication_report_tidy %>% mutate(liability_shift = gsub("FALSE", "NO FRIENDLY FRAUD PROTECTION", liability_shift))
 
-threedsecure_authentication_report_tidy <- threedsecure_authentication_report_tidy %>% mutate( liability_shift = gsub("TRUE", "FRIENDLY FRAUD PROTECTION", liability_shift))
+threedsecure_authentication_report_tidy <-
+  threedsecure_authentication_report_tidy %>% mutate(liability_shift = gsub("TRUE", "FRIENDLY FRAUD PROTECTION", liability_shift))
+
+ip_range <-
+  threedsecure_authentication_report_tidy %>% select(shopper_ip)
+
+ip_range <- ip_range %>% trimws()
+
+ip_range <- ip_range %>% pull(ip_range)
+
+geolocation_by_ip <-
+  rgeolocate::ip_api(ip_range, as_data_frame = TRUE, delay = TRUE)#need to use it with a proxy, otherwise is blocked by the corpo grid
+
+geolocation_by_ip_tidy <-
+  geolocation_by_ip %>% select(city_name, latitude, longitude, as_code, zip_code)
+
 
 #################################################################################
 ##################################Fast Lookup####################################
