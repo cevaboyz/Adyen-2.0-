@@ -36,6 +36,7 @@ library(lubridate)
 library(countrycode)
 library(stringi)
 library(tidyverse)
+
 ###############################################################################
 ###############################################################################
 #########################Auto Fetch############################################
@@ -215,11 +216,15 @@ geolocation_by_ip_tidy <-
 
 
 match_for_ip <-
-  threedsecure_authentication_report_tidy %>% select(shopper_ip,
-                                                     shopper_email,
-                                                     shopper_name,
-                                                     shopper_country,
-                                                     shopper_country)
+  threedsecure_authentication_report_tidy %>% select(
+    shopper_ip,
+    shopper_email,
+    shopper_name,
+    shopper_country,
+    shopper_country,
+    raw_acquirer_response,
+    creation_date
+  )
 
 botnet_user <-
   match_for_ip %>% group_by(shopper_email) %>% mutate(changed_ip = c("no", "yes")[1 +
@@ -237,7 +242,34 @@ botnet_user_with_names <-
         all.x = TRUE)
 
 botnet_user_with_names <-
-  botnet_user_with_names %>% select(shopper_email, shopper_name, shopper_ip, count)
+  botnet_user_with_names %>% select(
+    shopper_email,
+    shopper_name,
+    shopper_ip,
+    count,
+    raw_acquirer_response,
+    creation_date
+  )
+
+botnet_trial_final <-
+  botnet_user_with_names %>% group_by(shopper_email) %>% filter(creation_date ==
+                                                                  max(creation_date))
+
+botnet_final <-
+  botnet_user_with_names %>% group_by(shopper_email) %>% filter(creation_date ==
+                                                                  max(creation_date))
+
+botnet_final <- botnet_final %>% arrange(desc(count))
+
+botnet_final_minus_ip <-
+  botnet_user_with_names %>% group_by(shopper_email) %>% filter(creation_date ==
+                                                                  max(creation_date)) %>% select(-shopper_ip)
+
+
+botnet_final_minus_ip <-
+  botnet_final_minus_ip %>% arrange(desc(count))
+
+
 #################################################################################
 ##################################Fast Lookup####################################
 
