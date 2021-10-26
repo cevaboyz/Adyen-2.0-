@@ -269,7 +269,36 @@ botnet_final_minus_ip <-
 botnet_final_minus_ip <-
   botnet_final_minus_ip %>% arrange(desc(count))
 
+#################################################################################
+#################################################################################
+not_botnet_users_trials <-
+  botnet_user %>% filter(changed_ip == "no")
 
+not_botnet_user_count <-
+  not_botnet_users_trials %>% group_by(shopper_email) %>% summarize(count = n())
+
+not_botnet_user_with_names <-
+  merge(not_botnet_user_count,
+        threedsecure_authentication_report_tidy,
+        all.x = TRUE)
+
+not_botnet_user_with_names <-
+  not_botnet_user_with_names %>% select(
+    shopper_email,
+    shopper_name,
+    shopper_ip,
+    count,
+    raw_acquirer_response,
+    creation_date
+  )
+
+not_botnet_user_with_names_trial_final <-
+  not_botnet_user_with_names %>% group_by(shopper_email) %>% filter(creation_date == max(creation_date))
+
+
+not_botnet_user_with_names_trial_final <-
+  not_botnet_user_with_names_trial_final %>% filter(count >= 2)
+#################################################################################
 #################################################################################
 ##################################Fast Lookup####################################
 
