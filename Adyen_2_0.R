@@ -214,8 +214,37 @@ geolocation_by_ip_tidy <-
   geolocation_by_ip %>% select(city_name, latitude, longitude, as_code, zip_code)
 
 
+match_for_ip <-
+  threedsecure_authentication_report_tidy %>% select(shopper_ip,
+                                                     shopper_email,
+                                                     shopper_name,
+                                                     shopper_country,
+                                                     shopper_country)
+
+botnet_user <-
+  match_for_ip %>% group_by(shopper_email) %>% mutate(changed_ip = c("no", "yes")[1 +
+                                                                                    (n_distinct(shopper_ip) > 1)]) %>% ungroup
+
+botnet_user_yes <- botnet_user %>% filter(changed_ip == "yes")
+
+botnet_user_count <-
+  botnet_user_yes %>% group_by(shopper_email) %>% summarize(count = n())
+
+
+botnet_user_with_names <-
+  merge(botnet_user_count,
+        threedsecure_authentication_report_tidy,
+        all.x = TRUE)
+
+botnet_user_with_names <-
+  botnet_user_with_names %>% select(shopper_email, shopper_name, shopper_ip, count)
 #################################################################################
 ##################################Fast Lookup####################################
+
+
+
+
+
 
 
 
