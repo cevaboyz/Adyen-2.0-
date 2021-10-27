@@ -36,7 +36,7 @@ library(lubridate)
 library(countrycode)
 library(stringi)
 library(tidyverse)
-
+library(magrittr)
 ###############################################################################
 ###############################################################################
 #########################Auto Fetch############################################
@@ -138,6 +138,10 @@ threedsecure_authentication_report_tidy$issuer_country_code_1 <-
       destination = "country.name"
     )
   )
+
+threedsecure_authentication_report_tidy <-
+  threedsecure_authentication_report_tidy %>% mutate(acquirer_response = tolower(acquirer_response))
+
 
 threedsecure_authentication_report_tidy <-
   threedsecure_authentication_report_tidy %>% mutate(issuer_country_code = threedsecure_authentication_report_tidy$issuer_country_code_1$issuer_country_code)
@@ -297,11 +301,26 @@ not_botnet_user_with_names_trial_final <-
 
 
 not_botnet_user_with_names_trial_final <-
-  not_botnet_user_with_names_trial_final %>% filter(count >= 2)
+  not_botnet_user_with_names_trial_final %>% filter
+
+
+
+#################################################################################
+#################################################################################
+
+threedsecure_authentication_report_tidy <-
+  threedsecure_authentication_report_tidy %>% mutate(acquirer_response = tolower(acquirer_response))
+
+
+
+transactions_approved <-
+  threedsecure_authentication_report_tidy %>% filter(acquirer_response == "approved")
+#################################################################################
 #################################################################################
 #################################################################################
 ##################################Fast Lookup####################################
 
+issuer_table <- threedsecure_authentication_report_tidy %>% group_by(issuer_name) %>% summarize(count = n())
 
 
 
