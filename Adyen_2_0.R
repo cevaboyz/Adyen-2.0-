@@ -22,7 +22,7 @@
 #Libraries and Packages
 #auto updater and installer if the package is not already installed
 #if (!require("pacman")) install.packages("pacman")
-#pacman::p_load(dplyr, readr, ggplot2, hrbrthemes, RColorBrewer, lubridate, countrycode, stringi, tidyverse)
+#pacman::p_load(dplyr, readr, ggplot2, hrbrthemes, RColorBrewer, lubridate, countrycode, stringi, tidyverse, magrittr, DT)
 #
 
 
@@ -37,6 +37,7 @@ library(countrycode)
 library(stringi)
 library(tidyverse)
 library(magrittr)
+library(DT)
 ###############################################################################
 ###############################################################################
 #########################Auto Fetch############################################
@@ -315,12 +316,92 @@ threedsecure_authentication_report_tidy <-
 
 transactions_approved <-
   threedsecure_authentication_report_tidy %>% filter(acquirer_response == "approved")
+
+transaction_approved_aggregated <-
+  aggregate(
+    transactions_approved$amount,
+    by = list(transactions_approved$shopper_email),
+    FUN = sum
+  )
+
+
+transactions_approved_for_match_with_aggregated <-
+  transactions_approved %>% select(shopper_email, amount)
+
+
+names(transaction_approved_aggregated)[1] <- "shopper_email"
+
+names(transaction_approved_aggregated)[2] <- "amount"
+
+differences <-
+  setdiff(transactions_approved, transaction_approved_aggregated)
 #################################################################################
 #################################################################################
+#########################Which Card has an AOV higher?###########################
+aov_bank_aggregate_sum <-
+  aggregate(
+    transactions_approved$amount,
+    by = list(transactions_approved$issuer_name),
+    FUN = sum
+  )
+
+aov_bank_aggregate_sum <-
+  aov_bank_aggregate_sum %>% rename("Istituto_di_Credito" = Group.1, "Spesa Totale" = x)
+
+
+aov_bank_aggregate_sum <-
+  aov_bank_aggregate_sum %>% arrange(desc("Spesa Totale"))
+
+aov_bank_aggregate_average <-
+  aggregate(
+    transactions_approved$amount,
+    by = list(transactions_approved$issuer_name),
+    FUN = mean
+  )
+
+aov_bank_aggregate_average <-
+  aov_bank_aggregate_average %>% rename("Istituto_di_Credito" = Group.1, "Spesa Media" = x)
+
+aov_bank_aggregate_average$`Spesa Totale` <-
+  format(round(aov_bank_aggregate_average$`Spesa Totale`), nsmall = 2)
+
+aov_bank_aggregate_average <-
+  aov_bank_aggregate_average %>% arrange(desc("Spesa Media"))
+
+
+table_raw_acquirer_response <-
+  threedsecure_authentication_report_tidy %>% group_by(raw_acquirer_response) %>% summarize(count = n())
+
+table_raw_acquirer_response <-
+  table_raw_acquirer_response %>% rename("Transaction Status" = raw_acquirer_response, "Count" = count) 
+
+
+#CONTINUE....
+#ANALYSIS
+#API CONNECTION
+#R TO POWER POINT
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #################################################################################
 ##################################Fast Lookup####################################
 
-issuer_table <- threedsecure_authentication_report_tidy %>% group_by(issuer_name) %>% summarize(count = n())
+issuer_table <-
+  threedsecure_authentication_report_tidy %>% group_by(issuer_name) %>% summarize(count = n())
 
 
 
