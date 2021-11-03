@@ -22,7 +22,7 @@
 #Libraries and Packages
 #auto updater and installer if the package is not already installed
 #if (!require("pacman")) install.packages("pacman")
-#pacman::p_load(dplyr, readr, ggplot2, hrbrthemes, RColorBrewer, lubridate, countrycode, stringi, tidyverse, magrittr, DT)
+#pacman::p_load(dplyr, readr, ggplot2, hrbrthemes, RColorBrewer, lubridate, countrycode, stringi, tidyverse, magrittr, DT, lattice)
 #
 
 
@@ -38,6 +38,7 @@ library(stringi)
 library(tidyverse)
 library(magrittr)
 library(DT)
+library(lattice)
 ###############################################################################
 ###############################################################################
 #########################Auto Fetch############################################
@@ -346,11 +347,20 @@ aov_bank_aggregate_sum <-
   )
 
 aov_bank_aggregate_sum <-
-  aov_bank_aggregate_sum %>% rename("Istituto_di_Credito" = Group.1, "Spesa Totale" = x)
+  aov_bank_aggregate_sum %>% rename("Istituto di Credito" = Group.1, "Spesa Totale" = x)
 
 
 aov_bank_aggregate_sum <-
-  aov_bank_aggregate_sum %>% arrange(desc("Spesa Totale"))
+  aov_bank_aggregate_sum %>% arrange(desc(`Spesa Totale`))
+
+
+aov_bank_aggregate_sum_top_10 <-
+  aov_bank_aggregate_sum %>% slice_head(n = 10)
+
+aov_bank_aggregate_sum_last_10 <-
+  aov_bank_aggregate_sum %>% slice_tail(n = 10)
+
+
 
 aov_bank_aggregate_average <-
   aggregate(
@@ -359,8 +369,9 @@ aov_bank_aggregate_average <-
     FUN = mean
   )
 
+
 aov_bank_aggregate_average <-
-  aov_bank_aggregate_average %>% rename("Istituto_di_Credito" = Group.1, "Spesa Media" = x)
+  aov_bank_aggregate_average %>% rename("Istituto di Credito" = Group.1, "Spesa Media" = x)
 
 aov_bank_aggregate_average$`Spesa Totale` <-
   format(round(aov_bank_aggregate_average$`Spesa Totale`), nsmall = 2)
@@ -368,12 +379,70 @@ aov_bank_aggregate_average$`Spesa Totale` <-
 aov_bank_aggregate_average <-
   aov_bank_aggregate_average %>% arrange(desc("Spesa Media"))
 
+aov_bank_aggregate_average_top_10 <-
+  aov_bank_aggregate_average %>% slice_head(n = 10)
+
+aov_bank_aggregate_average_last_10 <-
+  aov_bank_aggregate_average %>% slice_tail(n = 10)
 
 table_raw_acquirer_response <-
   threedsecure_authentication_report_tidy %>% group_by(raw_acquirer_response) %>% summarize(count = n())
 
 table_raw_acquirer_response <-
-  table_raw_acquirer_response %>% rename("Transaction Status" = raw_acquirer_response, "Count" = count) 
+  table_raw_acquirer_response %>% rename("Transaction Status" = raw_acquirer_response, "Count" = count)
+
+
+#################################################################################
+##################################CORRELATION TYPE OF CARD AMOUNT################
+
+corr_issuer_risk <-
+  threedsecure_authentication_report_tidy %>% select(issuer_name, risk_score)
+
+
+ggplot(data = corr_issuer_risk,
+       aes(
+         x = issuer_name,
+         y = risk_score,
+         group = issuer_name,
+         fill = issuer_name
+       )) +
+  geom_boxplot() +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+  xlab("Issuer") +
+  ylab("Risk score") +
+  guides(fill = guide_legend(title = "Legend Title: Issuer"))
+
+
+
+
+##################################################################################
+
+
+
+corr_issuer_amount <-
+  threedsecure_authentication_report_tidy %>% select(issuer_name, amount)
+
+
+ggplot(data = corr_issuer_amount,
+       aes(
+         x = issuer_name,
+         y = amount,
+         group = issuer_name,
+         fill = issuer_name
+       )) +
+  geom_boxplot() +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+  xlab("Issuer") +
+  ylab("Amount") +
+  guides(fill = guide_legend(title = "Legend Title: Issuer"))
+
+##################################################################################
+##################################################################################
+
+corr_issuer_trials
+
+
+
 
 
 #CONTINUE....
